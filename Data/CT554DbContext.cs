@@ -54,11 +54,12 @@ public class CT554DbContext : IdentityDbContext<User>
 			product.Property(p => p.Id).ValueGeneratedOnAdd();
 			product.Property(p => p.WellKnownId).HasMaxLength(20);
 			product.Property(p => p.Name).HasMaxLength(50);
-			product.Property(p => p.Description).HasMaxLength(500);
+			product.Property(p => p.Description).HasMaxLength(1000);
+			product.Property(p => p.DateUpdate).HasConversion(typeof(UtcValueConverter));
 			product.HasMany<ProductDetail>(p => p.Details).WithOne(pd => pd.Product).HasForeignKey(pd => pd.ProductId);
 			product.HasMany<Image>(p => p.Images).WithOne(i => i.Product).HasForeignKey(i => i.ProductId);
 		});
-
+		
 		builder.Entity<ProductDetail>(detail =>
 		{
 			detail.HasKey(pd => pd.Id);

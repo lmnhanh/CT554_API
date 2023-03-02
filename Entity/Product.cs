@@ -6,7 +6,8 @@
 		public string Name { get; set; } = string.Empty;
 		public string WellKnownId { get; set; } = string.Empty;
 		public string Description { get; set; } = string.Empty;
-		public bool IsActive { get; set; } = true;
+        public DateTime DateUpdate { get; set; } = DateTime.UtcNow;
+        public bool IsActive { get; set; } = true;
 		public bool IsRecommended { get; set; } = false;
 
 		public int CategoryId { get; set; }
