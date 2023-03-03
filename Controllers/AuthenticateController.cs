@@ -41,53 +41,54 @@ namespace CT554_API.Controllers
 		public async Task<IActionResult> Login([FromBody] LoginModel model)
 		{
 			var user = await _userManager.FindByNameAsync(model.Username);
-			if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
-			{
-				var userRoles = await _userManager.GetRolesAsync(user);
-
-				var authClaims = new List<Claim>
-				{
-					new Claim("username", user.UserName ?? ""),
-					new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-				};
-
-				foreach (var userRole in userRoles)
-				{
-					authClaims.Add(new Claim("role", userRole));
-				}
-
-				var token = GetToken(authClaims);
-
-				return Ok(new
-				{
-					access_token = new JwtSecurityTokenHandler().WriteToken(token),
-					expiration = token.ValidTo
-				});
-			}
-			return Unauthorized();
 			//if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
 			//{
-			//	string role = (await _userManager.GetRolesAsync(user)).FirstOrDefault() ?? "";
-			//	var values = new Dictionary<string, string>
+			//	var userRoles = await _userManager.GetRolesAsync(user);
+
+			//	var authClaims = new List<Claim>
 			//	{
-			//		{ "client_id", "Admin_LmA7@!@D" },
-			//		{ "client_secret", _configuration[$"JWT:Secret:{role}"]?? "" },
-			//		{ "scope", role },
-			//		{"grant_type", "client_credentials" }
+			//		new Claim("username", user.UserName ?? ""),
+			//		new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
 			//	};
 
-			//	var data = new FormUrlEncodedContent(values);
+			//	foreach (var userRole in userRoles)
+			//	{
+			//		authClaims.Add(new Claim("role", userRole));
+			//	}
 
-			//	var url = "https://localhost:5001/connect/token";
-			//	using var client = new HttpClient();
-			//	var response = await client.PostAsync(url, data);
+			//	var token = GetToken(authClaims);
 
-			//	string result = await response.Content.ReadAsStringAsync();
-			//	var responseObject = JsonConvert.DeserializeObject<ConnectModel>(result);
-
-			//	return Ok(responseObject);
+			//	return Ok(new
+			//	{
+			//		access_token = new JwtSecurityTokenHandler().WriteToken(token),
+			//		expiration = token.ValidTo
+			//	});
 			//}
 			//return Unauthorized();
+
+			if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
+			{
+				string role = (await _userManager.GetRolesAsync(user)).FirstOrDefault() ?? "";
+				var values = new Dictionary<string, string>
+				{
+					{ "client_id", "Admin_LmA7@!@D" },
+					{ "client_secret", _configuration[$"JWT:Secret:{role}"]?? "" },
+					{ "scope", role },
+					{"grant_type", "client_credentials" }
+				};
+
+				var data = new FormUrlEncodedContent(values);
+
+				var url = "https://localhost:5001/connect/token";
+				using var client = new HttpClient();
+				var response = await client.PostAsync(url, data);
+
+				string result = await response.Content.ReadAsStringAsync();
+				var responseObject = JsonConvert.DeserializeObject<ConnectModel>(result);
+
+				return Ok(responseObject);
+			}
+			return Unauthorized();
 		}
 
 		[HttpPost]

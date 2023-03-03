@@ -9,8 +9,8 @@ using NuGet.Packaging;
 namespace CT554_API.Controllers
 {
     [Route("api/[controller]")]
-    //[Authorize(Policy ="Admin")]
-    [Authorize(Roles ="Admin")]
+    [Authorize(policy: "Admin")]
+    //[Authorize(Roles ="Admin")]
     [ApiController]
     public class ProductsController : ControllerBase
     {
@@ -133,7 +133,7 @@ namespace CT554_API.Controllers
             {
                 return NotFound();
             }
-            var product = await _context.Products.FindAsync(id);
+            var product = await _context.Products.Include(product => product.Category).FirstOrDefaultAsync(product => product.Id == id);
             foreach(var claim in User.Claims.ToList())
             {
                 Console.Write(claim.Type + " " + claim.Value);

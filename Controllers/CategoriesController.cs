@@ -9,8 +9,8 @@ using NuGet.Packaging;
 namespace CT554_API.Controllers
 {
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")]
-    //[Authorize(policy: "Admin")]
+    //[Authorize(Roles = "Admin")]
+    [Authorize(policy: "Admin")]
     [ApiController]
     public class CategoriesController : ControllerBase
     {
