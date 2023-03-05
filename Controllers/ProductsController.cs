@@ -1,6 +1,5 @@
 ﻿using CT554_API.Data;
 using CT554_API.Entity;
-using CT554_API.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +8,7 @@ using NuGet.Packaging;
 namespace CT554_API.Controllers
 {
     [Route("api/[controller]")]
-    [Authorize(policy: "Admin")]
+    [Authorize(Policy = "Admin")]
     //[Authorize(Roles ="Admin")]
     [ApiController]
     public class ProductsController : ControllerBase
@@ -22,6 +21,7 @@ namespace CT554_API.Controllers
         }
 
         // GET: api/Products
+        //recommended: -1: all, 0: false, 1: true
         [HttpGet]
         public async Task<ActionResult<object>> GetProducts([FromQuery] string name = "", [FromQuery] string filter = "", [FromQuery] int page = 1,
             [FromQuery] int size = 5, [FromQuery] string sort = "", [FromQuery] string order = "")
@@ -37,22 +37,28 @@ namespace CT554_API.Controllers
                 var keys = name.Split(' ');
                 foreach (var key in keys)
                 {
-                   products.AddRange(temp_list.Where(c => c.Name.ToLower().Contains(key.ToLower())));
+                    products.AddRange(temp_list.Where(c => c.Name.ToLower().Contains(key.ToLower())));
                 }
             }
             else
             {
-               products = temp_list.ToHashSet();
+                products = temp_list.ToHashSet();
             }
-            products = filter switch
+
+            if (filter != string.Empty)
             {
-                "active" => products.Where(c => c.IsActive).ToHashSet(),
-                "unactive" => products.Where(c => !c.IsActive).ToHashSet(),
-                _ => products,
-            };
+                products = filter switch
+                {
+                    "active" => products.Where(c => c.IsActive).ToHashSet(),
+                    _ => products.Where(c => !c.IsActive).ToHashSet(),
+                };
+
+            }
+
             var totalRows = products.Count;
 
             products = products.OrderBy(c => c.Id).ToHashSet();
+
             if (order.ToLower().Contains("desc"))
             {
                 products = products.OrderByDescending(c => c.Id).ToHashSet();
@@ -80,7 +86,7 @@ namespace CT554_API.Controllers
 
             return new
             {
-                products = products.Skip((page - 1) * size).Take(size),
+                products = products.OrderByDescending(c => c.IsRecommended).Skip((page - 1) * size).Take(size),
                 totalRows,
                 totalPages = (totalRows - 1) / size + 1,
             };
@@ -134,7 +140,7 @@ namespace CT554_API.Controllers
                 return NotFound();
             }
             var product = await _context.Products.Include(product => product.Category).FirstOrDefaultAsync(product => product.Id == id);
-            foreach(var claim in User.Claims.ToList())
+            foreach (var claim in User.Claims.ToList())
             {
                 Console.Write(claim.Type + " " + claim.Value);
             }
@@ -180,7 +186,7 @@ namespace CT554_API.Controllers
         // POST: api/Products
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Product>> PostProduct([Bind("Id,Name,Description,WellKnownId,CategoryId,IsActive,IsRecommended")]Product product)
+        public async Task<ActionResult<Product>> PostProduct([Bind("Id,Name,Description,WellKnownId,CategoryId,IsActive,IsRecommended")] Product product)
         {
             if (_context.Products == null)
             {

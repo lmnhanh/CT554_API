@@ -1,6 +1,8 @@
+using CT554_API.Auth;
 using CT554_API.Data;
 using CT554_API.Entity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -27,56 +29,61 @@ builder.Services.AddCors(options =>
         });
 });
 
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-//builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
-    {
-        options.Authority = "https://localhost:5001";
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateAudience = false,
-            ValidTypes = new[] { "at+jwt" }
-        };
-    });
-
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("Admin", builder =>
-    {
-        builder.RequireClaim("scope", new[] { "Admin" });
-    });
-    options.AddPolicy("Customer", builder =>
-    {
-        builder.RequireClaim("scope", new[] { "Customer" });
-    });
-});
-
-
 //builder.Services.AddAuthentication(options =>
 //{
 //    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
 //    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 //    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-//}).AddJwtBearer(options =>
-//{
-//    options.SaveToken = true;
-//    options.RequireHttpsMetadata = false;
-//    options.TokenValidationParameters = new TokenValidationParameters()
+//})
+////builder.Services.AddAuthentication("Bearer")
+//    .AddJwtBearer("Bearer", options =>
 //    {
-//        ValidateIssuer = true,
-//        ValidateAudience = true,
-//        ValidAudience = configuration["JWT:ValidAudience"],
-//        ValidIssuer = configuration["JWT:ValidIssuer"],
-//        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Secret:Admin"]?? ""))
-//    };
-//});
+//        options.Authority = "https://localhost:5001";
+//        options.TokenValidationParameters = new TokenValidationParameters
+//        {
+//            ValidateAudience = false,
+//            ValidTypes = new[] { "at+jwt" }
+//        };
+//    });
+
+builder.Services.AddAuthorization(options =>
+{
+    //options.AddPolicy("Admin", builder =>
+    //{
+    //    builder.RequireClaim("scope", new[] { "Admin" });
+    //});
+    //options.AddPolicy("Customer", builder =>
+    //{
+    //    builder.RequireClaim("scope", new[] { "Customer" });
+    //});
+    options.AddPolicy("Admin", builder =>
+    {
+        builder.AddRequirements(new RequirementRoleClaim("Admin"));
+    });
+});
+
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(options =>
+{
+    options.SaveToken = true;
+    options.RequireHttpsMetadata = false;
+    options.TokenValidationParameters = new TokenValidationParameters()
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidAudience = configuration["JWT:ValidAudience"],
+        ValidIssuer = configuration["JWT:ValidIssuer"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Secret:Admin"] ?? ""))
+    };
+});
 
 builder.Services.AddControllers();
+builder.Services.AddScoped<IAuthorizationHandler, PoliciesAuthorizationHandler>();
 //.AddNewtonsoftJson(options =>{
 //	options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
 //});
