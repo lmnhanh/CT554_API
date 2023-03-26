@@ -4,6 +4,7 @@ using CT554_Entity.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CT554_API.Migrations
 {
     [DbContext(typeof(CT554DbContext))]
-    partial class CT554DbContextModelSnapshot : ModelSnapshot
+    [Migration("20230320140257_Init_21022003")]
+    partial class Init_21022003
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -108,9 +111,6 @@ namespace CT554_API.Migrations
 
                     b.Property<DateTime>("DateCreate")
                         .HasColumnType("datetime2");
-
-                    b.Property<float>("RealTotal")
-                        .HasColumnType("real");
 
                     b.Property<Guid>("VenderId")
                         .HasColumnType("uniqueidentifier");
@@ -252,11 +252,8 @@ namespace CT554_API.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
-
-                    b.Property<bool>("IsAvailable")
-                        .HasColumnType("bit");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
@@ -268,6 +265,9 @@ namespace CT554_API.Migrations
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
+
+                    b.Property<bool>("isAvailable")
+                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 
@@ -383,12 +383,9 @@ namespace CT554_API.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<DateTime>("DateStart")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("Description")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -407,7 +404,7 @@ namespace CT554_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Venders", "dbo");
+                    b.ToTable("Vender", "dbo");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>

@@ -1,5 +1,5 @@
-﻿using CT554_API.Data;
-using CT554_API.Entity;
+﻿using CT554_Entity.Data;
+using CT554_Entity.Entity;
 
 namespace CT554_API.Services
 {

@@ -4,6 +4,7 @@ using CT554_Entity.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,14 +12,16 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CT554_API.Migrations
 {
     [DbContext(typeof(CT554DbContext))]
-    partial class CT554DbContextModelSnapshot : ModelSnapshot
+    [Migration("20230305135554_Init")]
+    partial class Init
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("dbo")
-                .HasAnnotation("ProductVersion", "7.0.4")
+                .HasAnnotation("ProductVersion", "7.0.3")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -109,15 +112,7 @@ namespace CT554_API.Migrations
                     b.Property<DateTime>("DateCreate")
                         .HasColumnType("datetime2");
 
-                    b.Property<float>("RealTotal")
-                        .HasColumnType("real");
-
-                    b.Property<Guid>("VenderId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("VenderId");
 
                     b.ToTable("Invoices", "dbo");
                 });
@@ -252,11 +247,8 @@ namespace CT554_API.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
-
-                    b.Property<bool>("IsAvailable")
-                        .HasColumnType("bit");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
@@ -268,6 +260,9 @@ namespace CT554_API.Migrations
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
+
+                    b.Property<bool>("isAvailable")
+                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 
@@ -371,43 +366,6 @@ namespace CT554_API.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("Users", "dbo");
-                });
-
-            modelBuilder.Entity("CT554_Entity.Entity.Vender", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Company")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("DateStart")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("PhoneNumber")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Venders", "dbo");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -577,17 +535,6 @@ namespace CT554_API.Migrations
                     b.Navigation("Product");
                 });
 
-            modelBuilder.Entity("CT554_Entity.Entity.Invoice", b =>
-                {
-                    b.HasOne("CT554_Entity.Entity.Vender", "Vender")
-                        .WithMany("Invoices")
-                        .HasForeignKey("VenderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Vender");
-                });
-
             modelBuilder.Entity("CT554_Entity.Entity.InvoiceDetail", b =>
                 {
                     b.HasOne("CT554_Entity.Entity.Invoice", "Invoice")
@@ -749,11 +696,6 @@ namespace CT554_API.Migrations
                     b.Navigation("Carts");
 
                     b.Navigation("Orders");
-                });
-
-            modelBuilder.Entity("CT554_Entity.Entity.Vender", b =>
-                {
-                    b.Navigation("Invoices");
                 });
 #pragma warning restore 612, 618
         }

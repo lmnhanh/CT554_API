@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using CT554_API.Data;
-using CT554_API.Entity;
 using CT554_API.Models;
 using Microsoft.AspNetCore.Authorization;
 using NuGet.Packaging;
+using CT554_Entity.Data;
+using CT554_Entity.Entity;
 
 namespace CT554_API.Controllers
 {
@@ -34,7 +34,11 @@ namespace CT554_API.Controllers
             HashSet<Category> categories = new();
             if(page <= 0)
             {
-                return new { categories = await _context.Categories.ToListAsync()};
+                return filter switch
+                {
+                    "active" => new { categories = await _context.Categories.Where(c => c.IsActive).ToListAsync() },
+                    _ => new { categories = await _context.Categories.ToListAsync() }
+                };
             }
             var temp_list = await _context.Categories.ToListAsync();
             if (name != "")
@@ -179,20 +183,29 @@ namespace CT554_API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCategory(int id)
         {
-            if (_context.Categories == null)
+            try
             {
-                return NotFound();
-            }
-            var category = await _context.Categories.FindAsync(id);
-            if (category == null)
+                if (_context.Categories == null)
+                {
+                    return NotFound();
+                }
+                var category = await _context.Categories.FindAsync(id);
+                if (category == null)
+                {
+                    return NotFound();
+                }
+
+                _context.Categories.Remove(category);
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }catch(Exception ex)
             {
-                return NotFound();
+                return BadRequest(new ErrorResponse
+                {
+                    errors = new List<string> {"Lỗi khi xóa loại sản phẩm."
+                }
+                });
             }
-
-            _context.Categories.Remove(category);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
         }
 
         private bool CategoryExists(int id)

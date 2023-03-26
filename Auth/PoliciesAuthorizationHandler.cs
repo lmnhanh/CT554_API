@@ -1,4 +1,4 @@
-﻿using CT554_API.Entity;
+﻿using CT554_Entity.Entity;
 using IdentityModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -17,19 +17,19 @@ namespace CT554_API.Auth
 
         protected override async Task<Task> HandleRequirementAsync(AuthorizationHandlerContext context, RequirementRoleClaim requirement)
         {
-
-            if (context.User == null || !context.User.Identity.IsAuthenticated)
+            if (context.User == null || !context.User.Identity!.IsAuthenticated)
             {
                 context.Fail();
                 return Task.CompletedTask;
             }
 
-            var tokenRoleName = context.User.Claims.Where(claim => claim.Type == ClaimTypes.Role && claim.Value == requirement.RoleName).FirstOrDefault()?.Value ?? "";
+            var tokenRoleName = context.User.Claims.Where(claim => claim.Type == "scope").FirstOrDefault()!.Value ?? string.Empty;
+
             bool isValid = false;
             if (tokenRoleName != string.Empty)
             {
-                var user = await userManager.FindByNameAsync(context.User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Name)!.Value);
-                isValid = (await userManager.GetRolesAsync(user?? new User())).Contains(tokenRoleName);
+                var user = await userManager.FindByIdAsync(context.User.Claims.FirstOrDefault(claim => claim.Type == "client_id")!.Value);
+                isValid = (await userManager.GetRolesAsync(user ?? new User())).Contains(tokenRoleName);
             }
 
             if (isValid)

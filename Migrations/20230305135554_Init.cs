@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace CT554API.Migrations
+namespace CT554_API.Migrations
 {
     /// <inheritdoc />
     public partial class Init : Migration
@@ -96,7 +96,8 @@ namespace CT554API.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     WellKnownId = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    DateUpdate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     IsRecommended = table.Column<bool>(type: "bit", nullable: false),
                     CategoryId = table.Column<int>(type: "int", nullable: false)
@@ -259,6 +260,7 @@ namespace CT554API.Migrations
                 columns: table => new
                 {
                     URL = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Content = table.Column<byte[]>(type: "varbinary(max)", nullable: false),
                     ProductId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>

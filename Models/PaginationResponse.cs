@@ -2,7 +2,6 @@
 {
 	public static class PaginationResponse<T>
 	{
-		public static List<T> list { get; set; }
-
+		public static List<T> List { get; set; } = new List<T>();
 	}
 }

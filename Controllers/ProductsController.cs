@@ -1,5 +1,7 @@
-﻿using CT554_API.Data;
-using CT554_API.Entity;
+﻿using AutoMapper;
+using CT554_API.Models;
+using CT554_Entity.Data;
+using CT554_Entity.Entity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,36 +10,49 @@ using NuGet.Packaging;
 namespace CT554_API.Controllers
 {
     [Route("api/[controller]")]
-    [Authorize(Policy = "Admin")]
+    [Authorize(policy: "Admin")]
     //[Authorize(Roles ="Admin")]
     [ApiController]
     public class ProductsController : ControllerBase
     {
         private readonly CT554DbContext _context;
+        private readonly IMapper _mapper;
 
-        public ProductsController(CT554DbContext context)
+        public ProductsController(CT554DbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
         // GET: api/Products
         //recommended: -1: all, 0: false, 1: true
         [HttpGet]
-        public async Task<ActionResult<object>> GetProducts([FromQuery] string name = "", [FromQuery] string filter = "", [FromQuery] int page = 1,
+        public async Task<IActionResult> GetProducts([FromQuery] int? categoryId, [FromQuery] string name = "", [FromQuery] string filter = "", [FromQuery] int page = 1,
             [FromQuery] int size = 5, [FromQuery] string sort = "", [FromQuery] string order = "")
         {
             if (_context.Products == null)
             {
                 return NotFound();
             }
+
             HashSet<Product> products = new();
-            var temp_list = await _context.Products.Include(p => p.Category).ToListAsync();
+            var temp_list = categoryId switch
+            {
+                int id => await _context.Products.Where(product => product.CategoryId == id).Include(product => product.Category).Include(product => product.Details).ToListAsync(),
+                _ => await _context.Products.Include(product => product.Category).Include(product => product.Details).ToListAsync()
+            };
+
+            if (page <= 0)
+            {
+                return Ok(new { products = temp_list.Where(product => product.IsActive).Select(product => new { id = product.Id, name = product.Name }) });
+            }
+
             if (name != "")
             {
                 var keys = name.Split(' ');
                 foreach (var key in keys)
                 {
-                    products.AddRange(temp_list.Where(c => c.Name.ToLower().Contains(key.ToLower())));
+                    products.AddRange(temp_list.Where(c => c.Name.ToLower().Split(' ').Contains(key.ToLower())));
                 }
             }
             else
@@ -47,9 +62,10 @@ namespace CT554_API.Controllers
 
             if (filter != string.Empty)
             {
-                products = filter switch
+                products = filter.ToLower() switch
                 {
                     "active" => products.Where(c => c.IsActive).ToHashSet(),
+                    "recommended" => products.Where(c => c.IsRecommended).ToHashSet(),
                     _ => products.Where(c => !c.IsActive).ToHashSet(),
                 };
 
@@ -57,44 +73,31 @@ namespace CT554_API.Controllers
 
             var totalRows = products.Count;
 
-            products = products.OrderBy(c => c.Id).ToHashSet();
-
-            if (order.ToLower().Contains("desc"))
+            products = order.ToLower() switch
             {
-                products = products.OrderByDescending(c => c.Id).ToHashSet();
-                if (sort.ToLower().Contains("name"))
-                {
-                    products = products.OrderByDescending(c => c.Name).ToHashSet();
+                "desc" => sort.ToLower() switch {
+                    "name" => products.OrderByDescending(c => c.Name).ToHashSet(),
+                    "dateupdate" => products.OrderByDescending(c => c.DateUpdate).ToHashSet(),
+                    _ => products.OrderByDescending(c => c.Id).ToHashSet()
+                },
+                _ => sort.ToLower() switch {
+                    "name" => products = products.OrderBy(c => c.Name).ToHashSet(),
+                    "dateupdate" => products.OrderBy(c => c.DateUpdate).ToHashSet(),
+                    _ => products = products.OrderBy(c => c.Id).ToHashSet()
                 }
-                if (sort.ToLower().Contains("dateupdate"))
-                {
-                    products = products.OrderByDescending(c => c.DateUpdate).ToHashSet();
-                }
-            }
-            else
-            {
-                if (sort.ToLower().Contains("name"))
-                {
-                    products = products.OrderBy(c => c.Name).ToHashSet();
-                }
-                if (sort.ToLower().Contains("dateupdate"))
-                {
+            };
 
-                    products = products.OrderBy(c => c.DateUpdate).ToHashSet();
-                }
-            }
-
-            return new
+            return Ok(new
             {
-                products = products.OrderByDescending(c => c.IsRecommended).Skip((page - 1) * size).Take(size),
+                products = _mapper.Map<IEnumerable<ProductInfo>>(products.Skip((page - 1) * size).Take(size)),
                 totalRows,
                 totalPages = (totalRows - 1) / size + 1,
-            };
+            });
         }
 
         [AllowAnonymous]
         [HttpPost("UploadImage")]
-        public async Task<ActionResult> PostFiles([FromForm] IFormFile images)
+        public async Task<ActionResult> PostFiles([FromForm] IFormFile images, [FromHeader(Name = "productId")] int productId)
         {
             if (images == null)
             {
@@ -115,6 +118,7 @@ namespace CT554_API.Controllers
                     {
                         images.CopyTo(stream);
                         image.URL = id;
+                        image.ProductId = productId;
                         image.Content = stream.ToArray();
                     }
 
@@ -133,13 +137,17 @@ namespace CT554_API.Controllers
 
         // GET: api/Products/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Product>> GetProduct(int id)
+        public async Task<IActionResult> GetProduct(int id)
         {
             if (_context.Products == null)
             {
                 return NotFound();
             }
-            var product = await _context.Products.Include(product => product.Category).FirstOrDefaultAsync(product => product.Id == id);
+            var product = await _context.Products.Include(product => product.Category)
+                .Include(product => product.Details)!.ThenInclude(detail => detail.Prices)
+                .AsSplitQuery()
+                .Include(product => product.Details)!.ThenInclude(detail => detail.Stocks)
+                .FirstOrDefaultAsync(product => product.Id == id);
             foreach (var claim in User.Claims.ToList())
             {
                 Console.Write(claim.Type + " " + claim.Value);
@@ -149,7 +157,7 @@ namespace CT554_API.Controllers
                 return NotFound();
             }
 
-            return product;
+            return Ok(_mapper.Map<ProductInfo>(product));
         }
 
         // PUT: api/Products/5
@@ -162,10 +170,19 @@ namespace CT554_API.Controllers
                 return BadRequest();
             }
 
+            product.DateUpdate= DateTime.UtcNow;
             _context.Entry(product).State = EntityState.Modified;
 
             try
             {
+                var errors = new List<object>();
+                if (_context.Products.Any(c => c.WellKnownId.ToLower() == product.WellKnownId.ToLower() && c.Id != id))
+                    errors.Add(new { wellKnownId = "Mã sản phẩm đã tồn tại" });
+                if (_context.Products.Any(c => c.Name.ToLower() == product.Name.ToLower() && c.Id != id))
+                    errors.Add(new { name = "Tên sản phẩm đã tồn tại" });
+                if (errors.Count != 0)
+                    return BadRequest(errors);
+
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
@@ -188,40 +205,43 @@ namespace CT554_API.Controllers
         [HttpPost]
         public async Task<ActionResult<Product>> PostProduct([Bind("Id,Name,Description,WellKnownId,CategoryId,IsActive,IsRecommended")] Product product)
         {
-            if (_context.Products == null)
-            {
-                return Problem("Entity set 'CT554DbContext.Products'  is null.");
-            }
-            //if (_context.Products.Any(c => c.Name.ToLower() == product.Name.ToLower()))
-            //    return BadRequest(new ErrorResponse
-            //    {
-            //        errors = new List<string> {"Tên loại hải sản đã tồn tại."
-            //    }
-            //    });
+
+            var errors = new List<object>();
+            if (_context.Products.Any(c => c.WellKnownId.ToLower() == product.WellKnownId.ToLower()))
+                errors.Add(new { wellKnownId = "Mã sản phẩm đã tồn tại" });
+            if (_context.Products.Any(c => c.Name.ToLower() == product.Name.ToLower()))
+                errors.Add(new { name = "Tên sản phẩm đã tồn tại" });
+            if (errors.Count != 0)
+                return BadRequest(errors);
+
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetProduct", new { id = product.Id }, product);
+            return StatusCode(StatusCodes.Status201Created, await _context.Products.Include(product => product.Category).FirstOrDefaultAsync(product => product.Id == product.Id));
         }
 
         // DELETE: api/Products/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
-            if (_context.Products == null)
-            {
-                return NotFound();
-            }
             var product = await _context.Products.FindAsync(id);
             if (product == null)
             {
                 return NotFound();
             }
 
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
+            try
+            {
+                _context.Products.Remove(product);
+                await _context.SaveChangesAsync();
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (Exception)
+            {
+                return BadRequest();
+            }
+
         }
 
         private bool ProductExists(int id)
