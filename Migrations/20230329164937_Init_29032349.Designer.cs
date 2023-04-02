@@ -4,6 +4,7 @@ using CT554_Entity.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CT554_API.Migrations
 {
     [DbContext(typeof(CT554DbContext))]
-    partial class CT554DbContextModelSnapshot : ModelSnapshot
+    [Migration("20230329164937_Init_29032349")]
+    partial class Init_29032349
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -39,9 +42,6 @@ namespace CT554_API.Migrations
                         .HasColumnType("int");
 
                     b.Property<float>("Quantity")
-                        .HasColumnType("real");
-
-                    b.Property<float>("RealQuantity")
                         .HasColumnType("real");
 
                     b.Property<string>("UserId")
@@ -149,12 +149,6 @@ namespace CT554_API.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("DateCreate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DateProccessed")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DateSuccess")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")

@@ -4,8 +4,8 @@ namespace CT554_API.Models.Auth
 {
     public class RegisterModel
     {
-        [Required(ErrorMessage = "User Name is required")]
-        public string Username { get; set; } = null!;
+        [Required(ErrorMessage = "FullName is required")]
+        public string FullName { get; set; } = null!;
 
         [EmailAddress]
         [Required(ErrorMessage = "Email is required")]

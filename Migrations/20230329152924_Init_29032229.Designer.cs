@@ -4,6 +4,7 @@ using CT554_Entity.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CT554_API.Migrations
 {
     [DbContext(typeof(CT554DbContext))]
-    partial class CT554DbContextModelSnapshot : ModelSnapshot
+    [Migration("20230329152924_Init_29032229")]
+    partial class Init_29032229
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -39,9 +42,6 @@ namespace CT554_API.Migrations
                         .HasColumnType("int");
 
                     b.Property<float>("Quantity")
-                        .HasColumnType("real");
-
-                    b.Property<float>("RealQuantity")
                         .HasColumnType("real");
 
                     b.Property<string>("UserId")
@@ -151,12 +151,6 @@ namespace CT554_API.Migrations
                     b.Property<DateTime>("DateCreate")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("DateProccessed")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DateSuccess")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -168,8 +162,8 @@ namespace CT554_API.Migrations
                     b.Property<bool>("IsSuccess")
                         .HasColumnType("bit");
 
-                    b.Property<float>("Total")
-                        .HasColumnType("real");
+                    b.Property<long>("Total")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("UserId")
                         .HasColumnType("nvarchar(450)");

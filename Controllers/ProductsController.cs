@@ -217,7 +217,7 @@ namespace CT554_API.Controllers
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
 
-            return StatusCode(StatusCodes.Status201Created, await _context.Products.Include(product => product.Category).FirstOrDefaultAsync(product => product.Id == product.Id));
+            return StatusCode(StatusCodes.Status201Created, product);
         }
 
         // DELETE: api/Products/5

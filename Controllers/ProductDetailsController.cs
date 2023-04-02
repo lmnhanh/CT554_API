@@ -1,4 +1,5 @@
-﻿using CT554_API.Models;
+﻿using AutoMapper;
+using CT554_API.Models;
 using CT554_Entity.Data;
 using CT554_Entity.Entity;
 using Microsoft.AspNetCore.Mvc;
@@ -11,43 +12,28 @@ namespace CT554_API.Controllers
     public class ProductDetailsController : ControllerBase
     {
         private readonly ILogger<ProductDetailsController> _logger;
+        private readonly IMapper _mapper;
         private readonly CT554DbContext _context;
 
-        public ProductDetailsController(ILogger<ProductDetailsController> logger, CT554DbContext context)
+        public ProductDetailsController(ILogger<ProductDetailsController> logger, CT554DbContext context, IMapper mapper)
         {
             _logger = logger;
+            _mapper = mapper;
             _context = context;
         }
 
 
         [HttpGet()]
-        public async Task<IActionResult> GetProductDetails([FromQuery]int productId, [FromQuery]bool isActive = true)
+        public async Task<IActionResult> GetProductDetails([FromQuery] int productId, [FromQuery] bool isActive = true)
         {
-            List<ProductDetailModel> result = new();
-            var details = await _context.ProductDetails.Where(d => d.ProductId== productId).ToListAsync();
-            foreach (var detail in details)
+            var details = _context.ProductDetails.Where(d => d.ProductId == productId);
+            if (isActive)
             {
-                var importPrice = await _context.Prices.Where(p => p.ProductDetailId== detail.Id && p.IsImportPrice)
-                    .OrderByDescending(p => p.DateApply).FirstOrDefaultAsync();
-                var retailPrice = await _context.Prices.Where(p => p.ProductDetailId == detail.Id && p.IsRetailPrice)
-                    .OrderByDescending(p => p.DateApply).FirstOrDefaultAsync();
-                var wholePrice = await _context.Prices.Where(p => p.ProductDetailId == detail.Id && !p.IsRetailPrice)
-                    .OrderByDescending(p => p.DateApply).FirstOrDefaultAsync();
-                if(detail.IsAvailable == isActive) 
-                    result.Add(new ProductDetailModel
-                    {
-                        Id= detail.Id,
-                        ProductId = productId,
-                        Unit = detail.Unit,
-                        ToWholeSale = detail.ToWholesale,
-                        Description = detail.Description,
-                        ImportPrice = importPrice!.Value,
-                        RetailPrice = retailPrice!.Value,
-                        WholePrice = wholePrice!.Value,
-                        IsActive = detail.IsAvailable
-                    }) ;
-            }
-            return Ok(result);
+                details = details.Where(d => d.IsAvailable == isActive);
+            };
+            return Ok(_mapper.Map<IEnumerable<ProductDetailInfo>>(
+                await details.Include(detail => detail.Prices).Include(detail => detail.Stocks).ToListAsync())
+            );
         }
 
 
@@ -59,7 +45,7 @@ namespace CT554_API.Controllers
                 Unit = detail.Unit,
                 Description = detail.Description,
                 IsAvailable = detail.IsActive,
-                ToWholesale = detail.ToWholeSale,
+                ToWholesale = detail.ToWholesale,
                 ProductId = detail.ProductId,
             };
 
@@ -90,6 +76,57 @@ namespace CT554_API.Controllers
             await _context.Prices.AddRangeAsync(prices);
             await _context.SaveChangesAsync();
             return Ok(detail);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutProductDetail([FromRoute] int id, [FromBody] ProductDetailModel model)
+        {
+            if(id != model.Id)
+            {
+                return BadRequest();
+            }
+
+            var detail = _context.ProductDetails.Find(id) ?? throw new Exception("Not found");
+            _context.ProductDetails.Update(detail);
+            detail.Unit = model.Unit;
+            detail.Description = model.Description;
+            detail.IsAvailable = model.IsActive;
+            detail.ToWholesale = model.ToWholesale;
+
+            _context.Prices.Add(new Price
+            {
+                IsImportPrice = true,
+                Value = model.ImportPrice,
+                IsRetailPrice = false,
+                ProductDetailId = id
+            });
+            _context.Prices.Add(new Price
+            {
+                IsImportPrice = false,
+                Value = model.RetailPrice,
+                IsRetailPrice = true,
+                ProductDetailId = id
+            });
+            _context.Prices.Add(new Price
+            {
+                IsImportPrice = false,
+                Value = model.WholePrice,
+                IsRetailPrice = false,
+                ProductDetailId = id
+            });
+
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteProductDetail([FromRoute] int id)
+        {
+            var productDetailToDelete = await _context.ProductDetails.FindAsync(id) ?? throw new Exception("Not found");
+            _context.ProductDetails.Remove(productDetailToDelete);
+            await _context.SaveChangesAsync();
+            return NoContent();
         }
     }
 }

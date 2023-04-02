@@ -5,6 +5,7 @@ using CT554_Entity.Entity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CT554_API.Controllers
 {
@@ -34,6 +35,12 @@ namespace CT554_API.Controllers
                 .ThenInclude(productDetail => productDetail!.Prices)
                 .FirstOrDefaultAsync(Invoice => Invoice.Id == id)
                 ?? throw new Exception();
+
+            foreach (var detail in invoice.Details!)
+            {
+                detail.ProductDetail!.TargetDate = invoice.DateCreate;
+            }
+
             return Ok(_mapper.Map<InvoiceInfo>(invoice));
         }
 
@@ -46,6 +53,9 @@ namespace CT554_API.Controllers
             var invoices = await _context.Invoices.Include(invoice => invoice.Vender).Include(invoice => invoice.Details)!
                 .ThenInclude(detail => detail.ProductDetail)!
                 .ThenInclude(productDetail => productDetail!.Product)
+                .AsSplitQuery()
+                .Include(invoice => invoice.Details)!.ThenInclude(detail => detail.ProductDetail)
+                .ThenInclude(productDetail => productDetail!.Prices)
                 .ToListAsync();
 
             if (venderId != "0")
@@ -85,20 +95,23 @@ namespace CT554_API.Controllers
                 var toDateParsed = DateTime.Parse(toDate);
                 var fromDateParsed = toDate == "" ? DateTime.UtcNow : DateTime.Parse(fromDate);
 
-
-                _logger.LogError(fromDateParsed.ToString());
-                _logger.LogError(toDateParsed.ToString());
-
-
                 invoices = invoices.Where(invoice =>
-                    invoice.DateCreate.Date.CompareTo(DateTime.Parse(fromDate).Date) >= 0 &&
-                    invoice.DateCreate.Date.CompareTo(DateTime.Parse(toDate).Date) <= 0
+                    invoice.DateCreate.ToLocalTime().Date.CompareTo(DateTime.Parse(fromDate).Date) >= 0 &&
+                    invoice.DateCreate.ToLocalTime().Date.CompareTo(DateTime.Parse(toDate).Date) <= 0
                 ).ToList();
 
             }
 
-
             var totalRows = invoices.Count;
+
+            foreach (var invoice in invoices)
+            {
+                foreach (var detail in invoice.Details!)
+                {
+                    detail.ProductDetail!.TargetDate = invoice.DateCreate;
+                }
+            }
+
             invoices = order.ToLower() switch
             {
                 "desc" => sort.ToLower() switch

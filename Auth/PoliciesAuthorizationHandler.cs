@@ -15,7 +15,7 @@ namespace CT554_API.Auth
             this.userManager = userManager;
         }
 
-        protected override async Task<Task> HandleRequirementAsync(AuthorizationHandlerContext context, RequirementRoleClaim requirement)
+        protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, RequirementRoleClaim requirement)
         {
             if (context.User == null || !context.User.Identity!.IsAuthenticated)
             {
@@ -28,8 +28,9 @@ namespace CT554_API.Auth
             bool isValid = false;
             if (tokenRoleName != string.Empty)
             {
-                var user = await userManager.FindByIdAsync(context.User.Claims.FirstOrDefault(claim => claim.Type == "client_id")!.Value);
-                isValid = (await userManager.GetRolesAsync(user ?? new User())).Contains(tokenRoleName);
+                //var user = await userManager.FindByIdAsync(context.User.Claims.FirstOrDefault(claim => claim.Type == "client_id")!.Value);
+                //isValid = (await userManager.GetRolesAsync(user ?? new User())).Contains(tokenRoleName);
+                isValid = tokenRoleName.ToLower() == requirement.RoleName.ToLower();
             }
 
             if (isValid)
