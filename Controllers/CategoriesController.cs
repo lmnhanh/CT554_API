@@ -198,7 +198,7 @@ namespace CT554_API.Controllers
                 _context.Categories.Remove(category);
                 await _context.SaveChangesAsync();
                 return NoContent();
-            }catch(Exception ex)
+            }catch(Exception)
             {
                 return BadRequest(new ErrorResponse
                 {

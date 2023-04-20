@@ -10,6 +10,6 @@
         public long RetailPrice { get; set; } = 1L;
         public long WholePrice { get; set; } = 1L;
         public int ToWholesale { get; set; } = 0;
-        public bool IsActive { get; set; } = true;
+        public bool IsAvailable { get; set; } = true;
     }
 }

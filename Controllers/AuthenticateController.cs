@@ -115,19 +115,24 @@ namespace CT554_API.Controllers
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
             var userExists = await _userManager.FindByNameAsync(model.Email);
+            if(_userManager.Users.Any(user => user.PhoneNumber== model.PhoneNumber && user.PhoneNumberConfirmed))
+            {
+                return StatusCode(StatusCodes.Status400BadRequest, new { phoneNumber = "Số điện thoại đã tồn tại" });
+            }
             if (userExists != null)
-                return StatusCode(StatusCodes.Status500InternalServerError, new Response { Status = "Error", Message = "User already exists!" });
+                return StatusCode(StatusCodes.Status400BadRequest, new { email = "Email đã tồn tại" });
 
             User user = new User
             {
                 FullName = model.FullName,
                 Email = model.Email,
+                PhoneNumber= model.PhoneNumber,
                 SecurityStamp = Guid.NewGuid().ToString(),
                 UserName = model.Email
             };
             var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded)
-                return StatusCode(StatusCodes.Status500InternalServerError, new Response { Status = result.Errors.First().Description, Message = "User creation failed! Please check user details and try again." });
+                return StatusCode(StatusCodes.Status400BadRequest, new Response { Status = "Error", Message = "User creation failed! Please check user details and try again." });
             await _userManager.AddToRoleAsync(user, Roles.Customer);
             return Ok(new Response { Status = "Success", Message = "User created successfully!" });
         }
@@ -144,7 +149,10 @@ namespace CT554_API.Controllers
             {
                 FullName = model.FullName,
                 Email = model.Email,
+                PhoneNumber = model.PhoneNumber,
                 SecurityStamp = Guid.NewGuid().ToString(),
+                EmailConfirmed = true,
+                PhoneNumberConfirmed= true,
                 UserName = model.Email
             };
             var result = await _userManager.CreateAsync(user, model.Password);

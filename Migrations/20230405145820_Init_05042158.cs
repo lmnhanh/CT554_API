@@ -1,31 +1,32 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace CT554_API.Migrations
 {
     /// <inheritdoc />
-    public partial class Init_27032227 : Migration
+    public partial class Init_05042158 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<float>(
-                name: "ManualValue",
+            migrationBuilder.AddColumn<DateTime>(
+                name: "DateCreate",
                 schema: "dbo",
-                table: "Stocks",
-                type: "real",
+                table: "Users",
+                type: "datetime2",
                 nullable: false,
-                defaultValue: 0f);
+                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified));
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "ManualValue",
+                name: "DateCreate",
                 schema: "dbo",
-                table: "Stocks");
+                table: "Users");
         }
     }
 }

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace CT554_API.Migrations
 {
     /// <inheritdoc />
-    public partial class Init : Migration
+    public partial class Init_04042154 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -28,19 +28,6 @@ namespace CT554_API.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Categories", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Invoices",
-                schema: "dbo",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    DateCreate = table.Column<DateTime>(type: "datetime2", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Invoices", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -85,6 +72,24 @@ namespace CT554_API.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Users", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Venders",
+                schema: "dbo",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Company = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    DateStart = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Venders", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -144,9 +149,12 @@ namespace CT554_API.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     DateCreate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DateSuccess = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateProcessed = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    IsProccesed = table.Column<bool>(type: "bit", nullable: false),
+                    IsProcessed = table.Column<bool>(type: "bit", nullable: false),
                     IsSuccess = table.Column<bool>(type: "bit", nullable: false),
+                    Total = table.Column<float>(type: "real", nullable: false),
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },
                 constraints: table =>
@@ -255,6 +263,28 @@ namespace CT554_API.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Invoices",
+                schema: "dbo",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DateCreate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    RealTotal = table.Column<float>(type: "real", nullable: false),
+                    VenderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Invoices", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Invoices_Venders_VenderId",
+                        column: x => x.VenderId,
+                        principalSchema: "dbo",
+                        principalTable: "Venders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Images",
                 schema: "dbo",
                 columns: table => new
@@ -282,9 +312,9 @@ namespace CT554_API.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Unit = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(60)", maxLength: 60, nullable: false),
                     ToWholesale = table.Column<int>(type: "int", nullable: false),
-                    isAvailable = table.Column<bool>(type: "bit", nullable: false),
+                    IsAvailable = table.Column<bool>(type: "bit", nullable: false),
                     ProductId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
@@ -305,11 +335,12 @@ namespace CT554_API.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Quantity = table.Column<int>(type: "int", nullable: false),
+                    Quantity = table.Column<float>(type: "real", nullable: false),
+                    RealQuantity = table.Column<float>(type: "real", nullable: false),
                     IsAvailable = table.Column<bool>(type: "bit", nullable: false),
                     ProductDetailId = table.Column<int>(type: "int", nullable: false),
                     OrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -332,8 +363,7 @@ namespace CT554_API.Migrations
                         column: x => x.UserId,
                         principalSchema: "dbo",
                         principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -397,6 +427,8 @@ namespace CT554_API.Migrations
                     DateUpdate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     IsManualUpdate = table.Column<bool>(type: "bit", nullable: false),
                     ProductDetailId = table.Column<int>(type: "int", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ManualValue = table.Column<float>(type: "real", nullable: false),
                     Value = table.Column<float>(type: "real", nullable: false)
                 },
                 constraints: table =>
@@ -440,6 +472,12 @@ namespace CT554_API.Migrations
                 schema: "dbo",
                 table: "InvoiceDetails",
                 column: "ProductDetailId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Invoices_VenderId",
+                schema: "dbo",
+                table: "Invoices",
+                column: "VenderId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Orders_UserId",
@@ -579,6 +617,10 @@ namespace CT554_API.Migrations
 
             migrationBuilder.DropTable(
                 name: "Users",
+                schema: "dbo");
+
+            migrationBuilder.DropTable(
+                name: "Venders",
                 schema: "dbo");
 
             migrationBuilder.DropTable(

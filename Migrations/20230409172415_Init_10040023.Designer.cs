@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CT554_API.Migrations
 {
     [DbContext(typeof(CT554DbContext))]
-    [Migration("20230321151523_Init_21032214")]
-    partial class Init_21032214
+    [Migration("20230409172415_Init_10040023")]
+    partial class Init_10040023
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -41,11 +41,13 @@ namespace CT554_API.Migrations
                     b.Property<int>("ProductDetailId")
                         .HasColumnType("int");
 
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
+                    b.Property<float>("Quantity")
+                        .HasColumnType("real");
+
+                    b.Property<float>("RealQuantity")
+                        .HasColumnType("real");
 
                     b.Property<string>("UserId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
@@ -112,6 +114,9 @@ namespace CT554_API.Migrations
                     b.Property<DateTime>("DateCreate")
                         .HasColumnType("datetime2");
 
+                    b.Property<float>("RealTotal")
+                        .HasColumnType("real");
+
                     b.Property<Guid>("VenderId")
                         .HasColumnType("uniqueidentifier");
 
@@ -149,16 +154,25 @@ namespace CT554_API.Migrations
                     b.Property<DateTime>("DateCreate")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DateProcessed")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateSuccess")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<bool>("IsProccesed")
+                    b.Property<bool>("IsProcessed")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsSuccess")
                         .HasColumnType("bit");
+
+                    b.Property<float>("Total")
+                        .HasColumnType("real");
 
                     b.Property<string>("UserId")
                         .HasColumnType("nvarchar(450)");
@@ -255,6 +269,9 @@ namespace CT554_API.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("nvarchar(60)");
 
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("bit");
+
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
@@ -265,9 +282,6 @@ namespace CT554_API.Migrations
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
-
-                    b.Property<bool>("isAvailable")
-                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 
@@ -286,6 +300,13 @@ namespace CT554_API.Migrations
 
                     b.Property<bool>("IsManualUpdate")
                         .HasColumnType("bit");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<float>("ManualValue")
+                        .HasColumnType("real");
 
                     b.Property<float>("Value")
                         .HasColumnType("real");
@@ -309,6 +330,9 @@ namespace CT554_API.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime>("DateCreate")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("DayOfBirth")
                         .HasColumnType("datetime2");
 
@@ -325,6 +349,9 @@ namespace CT554_API.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<bool>("Gender")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPartner")
                         .HasColumnType("bit");
 
                     b.Property<bool>("LockoutEnabled")
@@ -387,8 +414,8 @@ namespace CT554_API.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -557,9 +584,7 @@ namespace CT554_API.Migrations
 
                     b.HasOne("CT554_Entity.Entity.User", "User")
                         .WithMany("Carts")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("UserId");
 
                     b.Navigation("Order");
 

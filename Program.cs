@@ -1,4 +1,5 @@
 using CT554_API.Auth;
+using CT554_API.Config.Middleware;
 using CT554_Entity.Data;
 using CT554_Entity.Entity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -103,7 +104,7 @@ var app = builder.Build();
 //	app.UseSwagger();
 //	app.UseSwaggerUI();
 //}
-
+//app.UseMiddleware<CustomExceptionHandlerMiddleware>();
 app.UseHttpsRedirection();
 
 app.UseCors();

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CT554_API.Migrations
 {
     [DbContext(typeof(CT554DbContext))]
-    [Migration("20230329152924_Init_29032229")]
-    partial class Init_29032229
+    [Migration("20230416164340_Init_16042343")]
+    partial class Init_16042343
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -42,6 +42,9 @@ namespace CT554_API.Migrations
                         .HasColumnType("int");
 
                     b.Property<float>("Quantity")
+                        .HasColumnType("real");
+
+                    b.Property<float>("RealQuantity")
                         .HasColumnType("real");
 
                     b.Property<string>("UserId")
@@ -151,19 +154,25 @@ namespace CT554_API.Migrations
                     b.Property<DateTime>("DateCreate")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DateProcessed")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateSuccess")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<bool>("IsProccesed")
+                    b.Property<bool>("IsProcessed")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsSuccess")
                         .HasColumnType("bit");
 
-                    b.Property<long>("Total")
-                        .HasColumnType("bigint");
+                    b.Property<float>("Total")
+                        .HasColumnType("real");
 
                     b.Property<string>("UserId")
                         .HasColumnType("nvarchar(450)");
@@ -281,6 +290,48 @@ namespace CT554_API.Migrations
                     b.ToTable("ProductDetails", "dbo");
                 });
 
+            modelBuilder.Entity("CT554_Entity.Entity.Promotion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("DateEnd")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DateStart")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long>("Discount")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPercentage")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("MaxDiscount")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<int>("Stock")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Promotions", "dbo");
+                });
+
             modelBuilder.Entity("CT554_Entity.Entity.Stock", b =>
                 {
                     b.Property<DateTime>("DateUpdate")
@@ -291,6 +342,10 @@ namespace CT554_API.Migrations
 
                     b.Property<bool>("IsManualUpdate")
                         .HasColumnType("bit");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<float>("ManualValue")
                         .HasColumnType("real");
@@ -316,6 +371,12 @@ namespace CT554_API.Migrations
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DateAsPartner")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DateCreate")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DayOfBirth")
                         .HasColumnType("datetime2");
@@ -551,6 +612,21 @@ namespace CT554_API.Migrations
                     b.ToTable("UserTokens", "dbo");
                 });
 
+            modelBuilder.Entity("ProductPromotion", b =>
+                {
+                    b.Property<int>("ProductsId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("PromotionsId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ProductsId", "PromotionsId");
+
+                    b.HasIndex("PromotionsId");
+
+                    b.ToTable("ProductPromotion", "dbo");
+                });
+
             modelBuilder.Entity("CT554_Entity.Entity.Cart", b =>
                 {
                     b.HasOne("CT554_Entity.Entity.Order", "Order")
@@ -588,7 +664,7 @@ namespace CT554_API.Migrations
                     b.HasOne("CT554_Entity.Entity.Vender", "Vender")
                         .WithMany("Invoices")
                         .HasForeignKey("VenderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Vender");
@@ -713,6 +789,21 @@ namespace CT554_API.Migrations
                     b.HasOne("CT554_Entity.Entity.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ProductPromotion", b =>
+                {
+                    b.HasOne("CT554_Entity.Entity.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CT554_Entity.Entity.Promotion", null)
+                        .WithMany()
+                        .HasForeignKey("PromotionsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

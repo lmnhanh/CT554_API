@@ -27,7 +27,7 @@ namespace CT554_API.Controllers
         // GET: api/Products
         //recommended: -1: all, 0: false, 1: true
         [HttpGet]
-        public async Task<IActionResult> GetProducts([FromQuery] int? categoryId, [FromQuery] string name = "", [FromQuery] string filter = "", [FromQuery] int page = 1,
+        public async Task<IActionResult> GetProducts([FromQuery] int? categoryId, [FromQuery] bool? hasPromotion, [FromQuery] string name = "", [FromQuery] string filter = "", [FromQuery] int page = 1,
             [FromQuery] int size = 5, [FromQuery] string sort = "", [FromQuery] string order = "")
         {
             if (_context.Products == null)
@@ -44,7 +44,12 @@ namespace CT554_API.Controllers
 
             if (page <= 0)
             {
-                return Ok(new { products = temp_list.Where(product => product.IsActive).Select(product => new { id = product.Id, name = product.Name }) });
+                var result = _context.Products.AsQueryable();
+                if(hasPromotion.HasValue && !hasPromotion.Value)
+                {
+                    result = result.Where(product => !product.Promotions!.Any(promotion => promotion.IsActive || promotion.DateEnd.AddHours(7) >= DateTime.Now));
+                }
+                return Ok(new { products = result.Where(product => product.IsActive).Select(product => new { id = product.Id, name = product.Name }).ToList() });
             }
 
             if (name != "")
@@ -163,26 +168,29 @@ namespace CT554_API.Controllers
         // PUT: api/Products/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutProduct(int id, Product product)
+        public async Task<IActionResult> PutProduct(int id, ProductDTO model)
         {
-            if (id != product.Id)
+            if (id != model.Id)
             {
                 return BadRequest();
             }
-
+            var product = _context.Products.Find(id) ?? throw new Exception("Product is not found");
             product.DateUpdate= DateTime.UtcNow;
-            _context.Entry(product).State = EntityState.Modified;
-
             try
             {
                 var errors = new List<object>();
-                if (_context.Products.Any(c => c.WellKnownId.ToLower() == product.WellKnownId.ToLower() && c.Id != id))
+                if (_context.Products.Any(c => c.WellKnownId.ToLower() == model.WellKnownId.ToLower() && c.Id != id))
                     errors.Add(new { wellKnownId = "Mã sản phẩm đã tồn tại" });
-                if (_context.Products.Any(c => c.Name.ToLower() == product.Name.ToLower() && c.Id != id))
+                if (_context.Products.Any(c => c.Name.ToLower() == model.Name.ToLower() && c.Id != id))
                     errors.Add(new { name = "Tên sản phẩm đã tồn tại" });
                 if (errors.Count != 0)
                     return BadRequest(errors);
-
+                product.Name = model.Name;
+                product.WellKnownId = model.WellKnownId;
+                product.Description= model.Description;
+                product.IsActive= model.IsActive;
+                product.IsRecommended = model.IsRecommended;
+                _context.Products.Update(product);
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
@@ -203,7 +211,7 @@ namespace CT554_API.Controllers
         // POST: api/Products
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Product>> PostProduct([Bind("Id,Name,Description,WellKnownId,CategoryId,IsActive,IsRecommended")] Product product)
+        public async Task<ActionResult<Product>> PostProduct([Bind("Id,Name,Description,WellKnownId,CategoryId,IsActive,IsRecommended")] ProductDTO product)
         {
 
             var errors = new List<object>();
@@ -214,10 +222,11 @@ namespace CT554_API.Controllers
             if (errors.Count != 0)
                 return BadRequest(errors);
 
-            _context.Products.Add(product);
+            var productToAdd = _mapper.Map<Product>(product);
+			_context.Products.Add(productToAdd);
             await _context.SaveChangesAsync();
 
-            return StatusCode(StatusCodes.Status201Created, product);
+            return StatusCode(StatusCodes.Status201Created, productToAdd);
         }
 
         // DELETE: api/Products/5

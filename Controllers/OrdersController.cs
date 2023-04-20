@@ -31,6 +31,9 @@ namespace CT554_API.Controllers
                 .AsSplitQuery()
                 .Include(order => order.Carts)!
                 .ThenInclude(cart => cart.ProductDetail).ThenInclude(detail => detail!.Product)
+                .AsSplitQuery()
+                .Include(order => order.Carts)!
+                .ThenInclude(cart => cart.ProductDetail).ThenInclude(detail => detail!.Stocks)
                 .Include(order => order.User)
                 .FirstOrDefaultAsync(order => order.Id == new Guid(id)) ?? throw new Exception("Order was not found");
 
@@ -54,57 +57,47 @@ namespace CT554_API.Controllers
             {
                 query = filter switch
                 {
-                    "processed" => query.Where(order => order.IsProccesed && !order.IsSuccess),
-                    "processing" => query.Where(order => !order.IsProccesed && !order.IsSuccess),
-                    "success" => query.Where(order => order.IsProccesed && order.IsSuccess),
-                    "fail" => query.Where(order => !order.IsProccesed && order.IsSuccess),
+                    "processed" => query.Where(order => order.IsProcessed && !order.IsSuccess),
+                    "processing" => query.Where(order => !order.IsProcessed && !order.IsSuccess),
+                    "success" => query.Where(order => order.IsProcessed && order.IsSuccess),
+                    "fail" => query.Where(order => !order.IsProcessed && order.IsSuccess),
                     _ => query.Where(order => order.User == null)
                 };
             }
 
             if (userName != "")
             {
-                var searchKey = userName.ToLower().Split(new char[] { ' ' });
-                query = query.Where(c => c.User != null && c.User.FullName.ToLower().Split(new char[] { ' ' }).Any(key => searchKey.Contains(key)));
-                if (productId != 0)
-                {
-                    query = query.Where(c => c.Carts!.Any(detail => detail.ProductDetail!.ProductId == productId));
-                }
+                query = query.Where(c => c.User != null && c.User.FullName.ToLower().Contains(userName.ToLower()));
             }
-            else
+
+            if (productId != 0)
             {
-                if (productId != 0)
-                {
-                    query = query.Where(c => c.Carts!.Any(detail => detail.ProductDetail!.ProductId == productId));
-                }
+                query = query.Where(c => c.Carts!.Any(detail => detail.ProductDetail!.ProductId == productId));
             }
+
 
             if (fromPrice != -1)
             {
                 query = query.Where(c => c.Total >= fromPrice);
-                if (toPrice != -1)
-                {
-                    query = query.Where(c => c.Total <= toPrice);
-                }
             }
-            else
+
+            if (toPrice != -1)
             {
-                if (toPrice != -1)
-                {
-                    query = query.Where(c => c.Total <= toPrice);
-                }
+                query = query.Where(c => c.Total <= toPrice);
             }
 
             if (fromDate != "")
             {
+                var fromDateParsed = DateTime.Parse(fromDate);
+
+                query = query.Where(order => order.DateCreate.AddHours(7).Date.CompareTo(fromDateParsed.Date) >= 0);
+            }
+
+            if (toDate != "")
+            {
                 var toDateParsed = DateTime.Parse(toDate);
-                var fromDateParsed = toDate == "" ? DateTime.UtcNow : DateTime.Parse(fromDate);
 
-                query = query.Where(order =>
-                    order.DateCreate.Date.CompareTo(DateTime.Parse(fromDate).Date) >= 0 &&
-                    order.DateCreate.Date.CompareTo(DateTime.Parse(toDate).Date) <= 0
-                );
-
+                query = query.Where(order => order.DateCreate.AddHours(7).Date.CompareTo(toDateParsed.Date) <= 0);
             }
 
 
@@ -179,6 +172,21 @@ namespace CT554_API.Controllers
             return StatusCode(StatusCodes.Status201Created, _mapper.Map<OrderInfo>(orderToAdd));
         }
 
+        [HttpPost("{id}")]
+        public async Task<IActionResult> SetOrderSuccess([FromRoute] string id, [FromQuery] bool success = true)
+        {
+            var orderToUpdate = await _context.Orders.FirstOrDefaultAsync(order => order.Id == Guid.Parse(id)) ?? throw new Exception("Order was not found");
+            if (success)
+            {
+                orderToUpdate.DateSuccess = DateTime.UtcNow;
+            }
+            orderToUpdate.IsProcessed = success;
+            orderToUpdate.IsSuccess = true;
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
         [HttpPut("{id}")]
         public async Task<IActionResult> PutOrder(string id, OrderDTO orderModel)
         {
@@ -187,8 +195,9 @@ namespace CT554_API.Controllers
                 return BadRequest();
             }
             float total = 0;
+            var oldOrder = _context.Orders.AsNoTracking().FirstOrDefault(order => order.Id == Guid.Parse(id)) ?? throw new Exception("Not found");
             var orderToUpdate = _mapper.Map<Order>(orderModel);
-            foreach(var cart in orderToUpdate.Carts!)
+            foreach (var cart in orderToUpdate.Carts!)
             {
                 var productDetail = await _context.ProductDetails.Include(product => product.Stocks).Include(product => product.Prices).FirstOrDefaultAsync(product => product.Id == cart.ProductDetailId)
                     ?? throw new Exception("Not found");
@@ -216,11 +225,58 @@ namespace CT554_API.Controllers
                 }
             }
             _context.Orders.Update(orderToUpdate);
+            orderToUpdate.UserId = orderModel.UserId;
+            orderToUpdate.DateCreate = oldOrder.DateCreate;
             orderToUpdate.Total = total;
-            orderToUpdate.IsProccesed = true;
-            orderToUpdate.DateProccesed = DateTime.UtcNow;
+            orderToUpdate.IsProcessed = true;
+            orderToUpdate.DateProcessed = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return Ok(_mapper.Map<OrderInfo>(orderToUpdate));
+        }
+
+        [HttpGet("statistic/revenue")]
+        public async Task<IActionResult> GetOverallRevenue()
+        {
+            var orderInThisMonth = await _context.Orders.Where(
+                    order => order.IsSuccess && order.IsProcessed &&
+                    order.DateCreate >= DateTime.UtcNow.AddDays(-30)
+                ).ToListAsync();
+            var orderInThisWeek = orderInThisMonth.Where(order => order.DateCreate >= DateTime.UtcNow.AddDays(-7)).ToList();
+            var orderInToday = orderInThisWeek.Where(order => order.DateCreate.ToLocalTime().Date == DateTime.Now.Date);
+            return Ok(new
+            {
+                thisMonth = orderInThisMonth.Sum(order => order.Total),
+                thisWeek = orderInThisWeek.Sum(order => order.Total),
+                today = orderInToday.Sum(order => order.Total)
+            });
+        }
+
+        [HttpGet("statistic/new")]
+        public async Task<IActionResult> GetOverallNewOrder()
+        {
+            var orderInThisMonth = await _context.Orders.Where(order => order.DateCreate >= DateTime.UtcNow.AddDays(-30)).ToListAsync();
+            var orderInThisWeek = orderInThisMonth.Where(order => order.DateCreate >= DateTime.UtcNow.AddDays(-7)).ToList();
+            var orderWaitingProcess = await _context.Orders.Where(order => !order.IsProcessed && !order.IsSuccess).CountAsync();
+            return Ok(new
+            {
+                thisMonth = orderInThisMonth.Count,
+                thisWeek = orderInThisWeek.Count,
+                waiting = orderWaitingProcess
+            });
+        }
+
+        [HttpGet("statistic/status")]
+        public async Task<IActionResult> GetOverallOrderStatus()
+        {
+            var orderInThisMonth = await _context.Orders.Where(order => order.DateCreate >= DateTime.UtcNow.AddDays(-30)).ToListAsync();
+            var orderInThisWeek = orderInThisMonth.Where(order => order.DateCreate >= DateTime.UtcNow.AddDays(-7)).ToList();
+            var orderInToday = _context.Orders.Where(order => order.DateCreate.AddHours(7).Date == DateTime.Now.Date).ToList();
+            return Ok(new
+            {
+                thisMonth = new { success = orderInThisMonth.Where(order => order.IsProcessed && order.IsSuccess).Count(), fail = orderInThisMonth.Where(order => !order.IsProcessed && order.IsSuccess).Count() },
+                thisWeek = new { success = orderInThisWeek.Where(order => order.IsProcessed && order.IsSuccess).Count(), fail = orderInThisWeek.Where(order => !order.IsProcessed && order.IsSuccess).Count() },
+                today = new { success = orderInToday.Where(order => order.IsProcessed && order.IsSuccess).Count(), fail = orderInToday.Where(order => !order.IsProcessed && order.IsSuccess).Count() }
+            });
         }
     }
 }

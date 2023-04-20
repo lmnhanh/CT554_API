@@ -5,6 +5,7 @@ using CT554_Entity.Entity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace CT554_API.Controllers
 {
@@ -37,18 +38,18 @@ namespace CT554_API.Controllers
 
         [HttpGet("{id}/changes")]
         public async Task<IActionResult> GetStockChangeOfProduct([FromRoute] int id, [FromQuery] string fromDate = "",
-            [FromQuery] string toDate = "", [FromQuery] int page = 1, [FromQuery] int size = 5)
+            [FromQuery] string toDate = "", [FromQuery] int page = 1, [FromQuery] int size = 10)
         {
             List<StockCombineModel> changes = new();
             var product = await _context.ProductDetails
                 .Include(product => product.Carts)!.ThenInclude(cart => cart.Order)
                 .AsSplitQuery()
-                .Include(product => product.InvoiceDetails)!.ThenInclude(invoice => invoice.Invoice)
+                .Include(product => product.InvoiceDetails)!.ThenInclude(invoice => invoice.Invoice).ThenInclude(invoice => invoice!.Vender)
                 .AsSplitQuery()
                 .Include(product => product.Stocks)
                 .FirstOrDefaultAsync(product => product.Id == id) ?? throw new Exception("Not found");
             var manualStocks = product.Stocks?.Where(stock => stock.IsManualUpdate);
-            var carts = product.Carts?.Where(cart => cart.OrderId != null && cart.Order?.DateProccesed != null);
+            var carts = product.Carts?.Where(cart => cart.OrderId != null && cart.Order?.DateProcessed != null);
             var invoices = product.InvoiceDetails;
             changes.AddRange(_mapper.Map<IEnumerable<StockCombineModel>>(manualStocks));
             changes.AddRange(_mapper.Map<IEnumerable<StockCombineModel>>(carts));
@@ -59,8 +60,8 @@ namespace CT554_API.Controllers
                 var toDateParsed = DateTime.Parse(toDate);
                 var fromDateParsed = toDate == "" ? DateTime.UtcNow : DateTime.Parse(fromDate);
                 changes = changes.Where(change =>
-                    change.DateUpdate.Date.CompareTo(DateTime.Parse(fromDate).Date) >= 0 &&
-                    change.DateUpdate.Date.CompareTo(DateTime.Parse(toDate).Date) <= 0
+                    change.DateUpdate.AddHours(7).Date.CompareTo(DateTime.Parse(fromDate).Date) >= 0 &&
+                    change.DateUpdate.AddHours(7).Date.CompareTo(DateTime.Parse(toDate).Date) <= 0
                 ).ToList();
             }
 

@@ -45,64 +45,54 @@ namespace CT554_API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Getinvoices([FromQuery] string venderId = "0", [FromQuery] int productId = 0, [FromQuery] string fromDate = "",
+        public async Task<IActionResult> Getinvoices([FromQuery] string venderName = "", [FromQuery] string venderId = "0" , [FromQuery] int productId = 0, [FromQuery] string fromDate = "",
             [FromQuery] string toDate = "", [FromQuery] int page = 1,
             [FromQuery] float fromPrice = -1, [FromQuery] float toPrice = -1,
             [FromQuery] int size = 5, [FromQuery] string sort = "", [FromQuery] string order = "")
         {
-            var invoices = await _context.Invoices.Include(invoice => invoice.Vender).Include(invoice => invoice.Details)!
-                .ThenInclude(detail => detail.ProductDetail)!
-                .ThenInclude(productDetail => productDetail!.Product)
-                .AsSplitQuery()
-                .Include(invoice => invoice.Details)!.ThenInclude(detail => detail.ProductDetail)
-                .ThenInclude(productDetail => productDetail!.Prices)
-                .ToListAsync();
+            var query = _context.Invoices.AsQueryable();
+
+            if(venderName != "") {
+                query = query.Where(invoice => invoice.Vender.Name.ToLower().Contains(venderName));
+            }
 
             if (venderId != "0")
             {
-                invoices = invoices.Where(c => c.VenderId == new Guid(venderId)).ToList();
-                if (productId != 0)
-                {
-                    invoices = invoices.Where(c => c.Details!.Any(detail => detail.ProductDetail!.ProductId == productId)).ToList();
-                }
+                query = query.Where(c => c.VenderId == Guid.Parse(venderId));
             }
-            else
-            {
-                if (productId != 0)
+            if (productId != 0)
                 {
-                    invoices = invoices.Where(c => c.Details!.Any(detail => detail.ProductDetail!.ProductId == productId)).ToList();
+                    query = query.Where(c => c.Details!.Any(detail => detail.ProductDetail!.ProductId == productId));
                 }
-            }
 
             if (fromPrice != -1)
             {
-                invoices = invoices.Where(c => c.RealTotal >= fromPrice).ToList();
-                if (toPrice != -1)
-                {
-                    invoices = invoices.Where(c => c.RealTotal <= toPrice).ToList();
-                }
+                query = query.Where(c => c.RealTotal >= fromPrice);
             }
-            else
+            if (toPrice != -1)
             {
-                if (toPrice != -1)
-                {
-                    invoices = invoices.Where(c => c.RealTotal <= toPrice).ToList();
-                }
+                query = query.Where(c => c.RealTotal <= toPrice);
             }
 
             if (fromDate != "")
             {
-                var toDateParsed = DateTime.Parse(toDate);
-                var fromDateParsed = toDate == "" ? DateTime.UtcNow : DateTime.Parse(fromDate);
-
-                invoices = invoices.Where(invoice =>
-                    invoice.DateCreate.ToLocalTime().Date.CompareTo(DateTime.Parse(fromDate).Date) >= 0 &&
-                    invoice.DateCreate.ToLocalTime().Date.CompareTo(DateTime.Parse(toDate).Date) <= 0
-                ).ToList();
-
+                var fromDateParsed = DateTime.Parse(fromDate);
+                query = query.Where(invoice => invoice.DateCreate.AddHours(7).Date.CompareTo(fromDateParsed.Date) >= 0);
             }
 
-            var totalRows = invoices.Count;
+            if(toDate != "")
+            {
+                var toDateParsed = DateTime.Parse(toDate);
+                query = query.Where(invoice => invoice.DateCreate.AddHours(7).Date.CompareTo(toDateParsed.Date) <= 0);
+            }
+
+            var totalRows = query.Count();
+
+            var invoices = await query.Include(invoice => invoice.Vender)
+                .Include(invoice => invoice.Details)!.ThenInclude(detail => detail.ProductDetail)
+                .ThenInclude(productDetail => productDetail!.Prices)
+                .ToListAsync();
+
 
             foreach (var invoice in invoices)
             {
@@ -122,9 +112,9 @@ namespace CT554_API.Controllers
                 },
                 _ => sort.ToLower() switch
                 {
-                    "total" => invoices = invoices.OrderBy(c => c.RealTotal).ToList(),
-                    "datecreate" => invoices = invoices.OrderBy(c => c.DateCreate).ToList(),
-                    _ => invoices = invoices.OrderBy(c => c.Id).ToList()
+                    "total" => invoices.OrderBy(c => c.RealTotal).ToList(),
+                    "datecreate" => invoices.OrderBy(c => c.DateCreate).ToList(),
+                    _ => invoices.OrderBy(c => c.Id).ToList()
                 }
             };
 
@@ -191,6 +181,20 @@ namespace CT554_API.Controllers
             await _context.SaveChangesAsync();
 
             return StatusCode(StatusCodes.Status201Created, _mapper.Map<InvoiceInfo>(invoiceToAdd));
+        }
+
+        [HttpGet("statistic/cost")]
+        public async Task<IActionResult> GetOverallCost()
+        {
+            var invoicesInThisMonth = await _context.Invoices.Where(invoice => invoice.DateCreate >= DateTime.UtcNow.AddDays(-30)).ToListAsync();
+            var invoicesInThisWeek = invoicesInThisMonth.Where(invoice => invoice.DateCreate >= DateTime.UtcNow.AddDays(-7)).ToList();
+            var incoicesInToday = invoicesInThisWeek.Where(invoice => invoice.DateCreate.ToLocalTime().Date == DateTime.Now.Date);
+            return Ok(new
+            {
+                thisMonth = invoicesInThisMonth.Sum(order => order.RealTotal),
+                thisWeek = invoicesInThisWeek.Sum(order => order.RealTotal),
+                today = incoicesInToday.Sum(order => order.RealTotal)
+            });
         }
     }
 }

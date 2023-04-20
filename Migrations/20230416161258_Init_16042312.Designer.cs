@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CT554_API.Migrations
 {
     [DbContext(typeof(CT554DbContext))]
-    [Migration("20230329151735_Init_29032217")]
-    partial class Init_29032217
+    [Migration("20230416161258_Init_16042312")]
+    partial class Init_16042312
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -41,8 +41,11 @@ namespace CT554_API.Migrations
                     b.Property<int>("ProductDetailId")
                         .HasColumnType("int");
 
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
+                    b.Property<float>("Quantity")
+                        .HasColumnType("real");
+
+                    b.Property<float>("RealQuantity")
+                        .HasColumnType("real");
 
                     b.Property<string>("UserId")
                         .HasColumnType("nvarchar(450)");
@@ -151,19 +154,25 @@ namespace CT554_API.Migrations
                     b.Property<DateTime>("DateCreate")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DateProcessed")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateSuccess")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<bool>("IsProccesed")
+                    b.Property<bool>("IsProcessed")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsSuccess")
                         .HasColumnType("bit");
 
-                    b.Property<long>("Total")
-                        .HasColumnType("bigint");
+                    b.Property<float>("Total")
+                        .HasColumnType("real");
 
                     b.Property<string>("UserId")
                         .HasColumnType("nvarchar(450)");
@@ -292,6 +301,10 @@ namespace CT554_API.Migrations
                     b.Property<bool>("IsManualUpdate")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<float>("ManualValue")
                         .HasColumnType("real");
 
@@ -316,6 +329,12 @@ namespace CT554_API.Migrations
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DateAsPartner")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DateCreate")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DayOfBirth")
                         .HasColumnType("datetime2");
@@ -588,7 +607,7 @@ namespace CT554_API.Migrations
                     b.HasOne("CT554_Entity.Entity.Vender", "Vender")
                         .WithMany("Invoices")
                         .HasForeignKey("VenderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Vender");

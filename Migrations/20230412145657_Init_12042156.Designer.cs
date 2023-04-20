@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CT554_API.Migrations
 {
     [DbContext(typeof(CT554DbContext))]
-    [Migration("20230402173320_Init_02040033")]
-    partial class Init_02040033
+    [Migration("20230412145657_Init_12042156")]
+    partial class Init_12042156
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -154,7 +154,7 @@ namespace CT554_API.Migrations
                     b.Property<DateTime>("DateCreate")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("DateProccessed")
+                    b.Property<DateTime?>("DateProcessed")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DateSuccess")
@@ -165,7 +165,7 @@ namespace CT554_API.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<bool>("IsProccesed")
+                    b.Property<bool>("IsProcessed")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsSuccess")
@@ -301,6 +301,10 @@ namespace CT554_API.Migrations
                     b.Property<bool>("IsManualUpdate")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<float>("ManualValue")
                         .HasColumnType("real");
 
@@ -325,6 +329,12 @@ namespace CT554_API.Migrations
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DateAsPartner")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DateCreate")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DayOfBirth")
                         .HasColumnType("datetime2");
@@ -597,7 +607,7 @@ namespace CT554_API.Migrations
                     b.HasOne("CT554_Entity.Entity.Vender", "Vender")
                         .WithMany("Invoices")
                         .HasForeignKey("VenderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Vender");

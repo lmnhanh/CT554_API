@@ -5,27 +5,27 @@
 namespace CT554_API.Migrations
 {
     /// <inheritdoc />
-    public partial class Init_28032122 : Migration
+    public partial class Init_10040023 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<long>(
-                name: "Total",
+            migrationBuilder.AddColumn<bool>(
+                name: "IsPartner",
                 schema: "dbo",
-                table: "Orders",
-                type: "bigint",
+                table: "Users",
+                type: "bit",
                 nullable: false,
-                defaultValue: 0L);
+                defaultValue: false);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "Total",
+                name: "IsPartner",
                 schema: "dbo",
-                table: "Orders");
+                table: "Users");
         }
     }
 }

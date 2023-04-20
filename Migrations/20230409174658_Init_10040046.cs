@@ -6,22 +6,20 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace CT554_API.Migrations
 {
     /// <inheritdoc />
-    public partial class Init_02040033 : Migration
+    public partial class Init_10040046 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<DateTime>(
-                name: "DateProccessed",
+            migrationBuilder.DropColumn(
+                name: "IsPartner",
                 schema: "dbo",
-                table: "Orders",
-                type: "datetime2",
-                nullable: true);
+                table: "Users");
 
             migrationBuilder.AddColumn<DateTime>(
-                name: "DateSuccess",
+                name: "DateAsPartner",
                 schema: "dbo",
-                table: "Orders",
+                table: "Users",
                 type: "datetime2",
                 nullable: true);
         }
@@ -30,14 +28,17 @@ namespace CT554_API.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "DateProccessed",
+                name: "DateAsPartner",
                 schema: "dbo",
-                table: "Orders");
+                table: "Users");
 
-            migrationBuilder.DropColumn(
-                name: "DateSuccess",
+            migrationBuilder.AddColumn<bool>(
+                name: "IsPartner",
                 schema: "dbo",
-                table: "Orders");
+                table: "Users",
+                type: "bit",
+                nullable: false,
+                defaultValue: false);
         }
     }
 }
