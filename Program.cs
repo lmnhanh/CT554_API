@@ -1,4 +1,5 @@
 using CT554_API.Auth;
+using CT554_API.Config.MailSender;
 using CT554_API.Config.Middleware;
 using CT554_Entity.Data;
 using CT554_Entity.Entity;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -21,7 +23,10 @@ builder.Services.AddDbContext<CT554DbContext>(option =>
         options => options.MigrationsAssembly("CT554_API"));
 });
 
-builder.Services.AddIdentity<User, IdentityRole>()
+builder.Services.AddIdentity<User, IdentityRole>(option =>
+{
+    option.SignIn.RequireConfirmedEmail = true;
+})
     .AddEntityFrameworkStores<CT554DbContext>()
     .AddDefaultTokenProviders();
 
@@ -30,7 +35,7 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(
         policy =>
         {
-            policy.WithOrigins("http://localhost:3000").AllowAnyMethod().AllowAnyHeader();
+            policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
         });
 });
 
@@ -89,9 +94,9 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddScoped<IAuthorizationHandler, PoliciesAuthorizationHandler>();
-//.AddNewtonsoftJson(options =>{
-//	options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
-//});
+
+builder.Services.AddTransient<IEmailSender, MailSender>();
+builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
 
 //builder.Services.AddEndpointsApiExplorer();
 //builder.Services.AddSwaggerGen();
@@ -101,8 +106,8 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 //if (app.Environment.IsDevelopment())
 //{
-//	app.UseSwagger();
-//	app.UseSwaggerUI();
+//    app.UseSwagger();
+//    app.UseSwaggerUI();
 //}
 //app.UseMiddleware<CustomExceptionHandlerMiddleware>();
 app.UseHttpsRedirection();

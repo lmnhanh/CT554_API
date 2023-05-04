@@ -1,4 +1,4 @@
-﻿using CT554_API.Models;
+﻿using CT554_API.Models.Common;
 using CT554_Entity.Data;
 using CT554_Entity.Entity;
 using Microsoft.AspNetCore.Authorization;

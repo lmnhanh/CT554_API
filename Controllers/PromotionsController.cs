@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
-using CT554_API.Models;
+using CT554_API.Models.DTO;
+using CT554_API.Models.View;
 using CT554_Entity.Data;
 using CT554_Entity.Entity;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CT554_API.Controllers
 {
-	[Route("api/[controller]")]
+    [Route("api/[controller]")]
 	[Authorize(Policy = "Admin")]
 	[ApiController]
 	public class PromotionsController : ControllerBase
@@ -27,7 +28,14 @@ namespace CT554_API.Controllers
 		{
 			var promotionToAdd = _mapper.Map<Promotion>(promotion);
 			promotionToAdd.DateCreate = DateTime.UtcNow;
-			promotionToAdd.Products = _context.Products.Where(product => promotion.ProductIds!.Contains(product.Id)).ToList();
+			promotionToAdd.Products = _context.Products.Where(product => 
+				promotion.ProductIds!.Contains(product.Id) &&
+				!product.Promotions!.Any(promotion => promotion.IsActive)
+				).ToList();
+			if(promotion.ProductIds == null || promotion.ProductIds.Count != promotionToAdd.Products.Count)
+			{
+				throw new Exception("There are some product already has active promotion");
+			}
 			await _context.Promotions.AddAsync(promotionToAdd);
 			await _context.SaveChangesAsync();
 			return StatusCode(StatusCodes.Status201Created, _mapper.Map<PromotionInfo>(promotionToAdd));
@@ -72,10 +80,10 @@ namespace CT554_API.Controllers
 			{
 				query = filter switch
 				{
-					"takingplace" => query.Where(promotion => promotion.DateStart.AddHours(7).CompareTo(DateTime.Now) <= 0
-													&& promotion.DateEnd.AddHours(7).CompareTo(DateTime.Now) >= 0),
-					"incoming" => query.Where(promotion => promotion.DateStart.AddHours(7).CompareTo(DateTime.Now) > 0),
-					"passed" => query.Where(promotion => promotion.DateEnd.AddHours(7).CompareTo(DateTime.Now) < 0),
+					"takingplace" => query.Where(promotion => promotion.DateStart.AddHours(7).Date.CompareTo(DateTime.Now) <= 0
+													&& promotion.DateEnd.AddHours(7).Date.CompareTo(DateTime.Now) >= 0),
+					"incoming" => query.Where(promotion => promotion.DateStart.AddHours(7).Date.CompareTo(DateTime.Now) > 0),
+					"passed" => query.Where(promotion => promotion.DateEnd.AddHours(7).Date.CompareTo(DateTime.Now) < 0),
 					"unavailable" => query.Where(promotion => !promotion.IsActive),
 					_ => query
 				};

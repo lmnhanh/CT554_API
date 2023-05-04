@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
-using CT554_API.Models;
+using CT554_API.Models.DTO;
+using CT554_API.Models.View;
 using CT554_Entity.Data;
 using CT554_Entity.Entity;
 using Microsoft.AspNetCore.Authorization;

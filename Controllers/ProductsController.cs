@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
-using CT554_API.Models;
+using CT554_API.Models.DTO;
+using CT554_API.Models.View;
 using CT554_Entity.Data;
 using CT554_Entity.Entity;
 using Microsoft.AspNetCore.Authorization;
@@ -27,6 +28,7 @@ namespace CT554_API.Controllers
         // GET: api/Products
         //recommended: -1: all, 0: false, 1: true
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetProducts([FromQuery] int? categoryId, [FromQuery] bool? hasPromotion, [FromQuery] string name = "", [FromQuery] string filter = "", [FromQuery] int page = 1,
             [FromQuery] int size = 5, [FromQuery] string sort = "", [FromQuery] string order = "")
         {
@@ -36,18 +38,26 @@ namespace CT554_API.Controllers
             }
 
             HashSet<Product> products = new();
-            var temp_list = categoryId switch
+            var query = categoryId switch
             {
-                int id => await _context.Products.Where(product => product.CategoryId == id).Include(product => product.Category).Include(product => product.Details).ToListAsync(),
-                _ => await _context.Products.Include(product => product.Category).Include(product => product.Details).ToListAsync()
+                int id => _context.Products.Where(product => product.CategoryId == id),
+                _ => _context.Products
             };
 
-            if (page <= 0)
+            var temp_list = await query.Include(product => product.Promotions)
+                .Include(product => product.Images)
+                .Include(product => product.Category)
+                .Include(product => product.Details)!
+                .ThenInclude(detail => detail.Prices)
+                .ToListAsync();
+
+
+			if (page <= 0)
             {
                 var result = _context.Products.AsQueryable();
                 if(hasPromotion.HasValue && !hasPromotion.Value)
                 {
-                    result = result.Where(product => !product.Promotions!.Any(promotion => promotion.IsActive || promotion.DateEnd.AddHours(7) >= DateTime.Now));
+                    result = result.Where(product => !product.Promotions!.Any(promotion => promotion.IsActive && promotion.DateEnd.AddHours(7) >= DateTime.Now));
                 }
                 return Ok(new { products = result.Where(product => product.IsActive).Select(product => new { id = product.Id, name = product.Name }).ToList() });
             }
@@ -142,14 +152,17 @@ namespace CT554_API.Controllers
 
         // GET: api/Products/5
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetProduct(int id)
+		[AllowAnonymous]
+		public async Task<IActionResult> GetProduct(int id)
         {
             if (_context.Products == null)
             {
                 return NotFound();
             }
             var product = await _context.Products.Include(product => product.Category)
-                .Include(product => product.Details)!.ThenInclude(detail => detail.Prices)
+                .Include(product => product.Images)
+				.Include(product => product.Promotions)
+				.Include(product => product.Details)!.ThenInclude(detail => detail.Prices)
                 .AsSplitQuery()
                 .Include(product => product.Details)!.ThenInclude(detail => detail.Stocks)
                 .FirstOrDefaultAsync(product => product.Id == id);

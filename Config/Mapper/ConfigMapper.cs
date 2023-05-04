@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
-using CT554_API.Models;
+using CT554_API.Models.DTO;
+using CT554_API.Models.View;
 using CT554_Entity.Entity;
 
 namespace CT554_API.Config.Mapper
@@ -44,6 +45,7 @@ namespace CT554_API.Config.Mapper
             CreateMap<PromotionDTO, Promotion>();
             CreateMap<Promotion, PromotionInfo>();
 			CreateMap<ProductDTO, Product>();
+            CreateMap<Image, ImageInfo>();
 		}
     }
 }

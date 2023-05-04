@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
-using CT554_API.Models;
+using CT554_API.Models.DTO;
+using CT554_API.Models.View;
 using CT554_Entity.Data;
 using CT554_Entity.Entity;
 using Microsoft.AspNetCore.Authorization;
@@ -9,8 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CT554_API.Controllers
 {
     [Route("api/[controller]")]
-    [Authorize(policy: "Admin")]
-    //[Authorize(Roles ="Admin")]
+    [Authorize]
     [ApiController]
     public class OrdersController : ControllerBase
     {
@@ -30,7 +30,7 @@ namespace CT554_API.Controllers
                 .ThenInclude(cart => cart.ProductDetail).ThenInclude(detail => detail!.Prices)
                 .AsSplitQuery()
                 .Include(order => order.Carts)!
-                .ThenInclude(cart => cart.ProductDetail).ThenInclude(detail => detail!.Product)
+                .ThenInclude(cart => cart.ProductDetail).ThenInclude(detail => detail!.Product).ThenInclude(product => product!.Promotions)
                 .AsSplitQuery()
                 .Include(order => order.Carts)!
                 .ThenInclude(cart => cart.ProductDetail).ThenInclude(detail => detail!.Stocks)
@@ -117,7 +117,8 @@ namespace CT554_API.Controllers
                 }
             };
 
-            var orders = await query.Include(order => order.Carts)!.ThenInclude(cart => cart.ProductDetail)
+            var orders = await query.Include(order => order.Carts)!
+                .ThenInclude(cart => cart.ProductDetail)
                 .Include(order => order.User).Skip((page - 1) * size).Take(size).ToListAsync();
             var totalRows = await query.CountAsync();
             return Ok(
@@ -139,6 +140,7 @@ namespace CT554_API.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         public async Task<IActionResult> PostOrder([FromBody] OrderDTO orderModel)
         {
             var orderToAdd = _mapper.Map<Order>(orderModel);
@@ -158,12 +160,25 @@ namespace CT554_API.Controllers
                 }
                 else
                 {
+                    productDetail.TargetDate = DateTime.UtcNow;
                     total += (productDetail.ToWholesale <= cart.Quantity ? productDetail.GetWholePrice() : productDetail.GetRetailPrice()) * cart.Quantity;
                 }
-            }
+				var currentPromotion = _context.Promotions.OrderByDescending(p => p.DateCreate).FirstOrDefault(
+				   p => p.IsActive && p.Stock > 0 && p.DateStart.Date <= DateTime.Now.Date &&
+				   p.DateEnd.Date >= DateTime.Now.Date && p.Products.Any(pr => pr.Id == productDetail.ProductId));
 
+				if (currentPromotion != null)
+				{
+					currentPromotion.Stock -= 1;
+					if (currentPromotion.Stock < 1)
+					{
+						currentPromotion.IsActive = false;
+					}
+					_context.Promotions.Update(currentPromotion);
+				}
+			}
 
-            if (orderToAdd.Total == 0)
+			if (orderToAdd.Total == 0)
             {
                 orderToAdd.Total = total;
             }
@@ -223,13 +238,24 @@ namespace CT554_API.Controllers
                     _context.Stocks.Update(currentNotManualStock);
                     currentNotManualStock.Value -= cart.RealQuantity;
                 }
+                var currentPromotion = _context.Promotions.OrderByDescending(p => p.DateCreate).FirstOrDefault(
+                    p => p.IsActive && p.Stock > 0 && p.DateStart.Date <= DateTime.Now.Date &&
+                    p.DateEnd.Date >= DateTime.Now.Date && p.Products.Any(pr => pr.Id == productDetail.ProductId));
+
+                if(currentPromotion != null) {
+                    currentPromotion.Stock -= 1;
+                    if(currentPromotion.Stock < 1)
+                    {
+                        currentPromotion.IsActive = false;
+                    }
+                    _context.Promotions.Update(currentPromotion);
+                }
             }
-            _context.Orders.Update(orderToUpdate);
             orderToUpdate.UserId = orderModel.UserId;
             orderToUpdate.DateCreate = oldOrder.DateCreate;
-            orderToUpdate.Total = total;
             orderToUpdate.IsProcessed = true;
             orderToUpdate.DateProcessed = DateTime.UtcNow;
+            _context.Orders.Update(orderToUpdate);
             await _context.SaveChangesAsync();
             return Ok(_mapper.Map<OrderInfo>(orderToUpdate));
         }

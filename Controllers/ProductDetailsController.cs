@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
-using CT554_API.Models;
+using CT554_API.Models.DTO;
+using CT554_API.Models.View;
 using CT554_Entity.Data;
 using CT554_Entity.Entity;
 using Microsoft.AspNetCore.Authorization;
@@ -24,8 +25,21 @@ namespace CT554_API.Controllers
             _context = context;
         }
 
+		[HttpGet("{id}")]
+		[AllowAnonymous]
+		public async Task<IActionResult> GetProductDetail([FromRoute] int id)
+		{
+            var detail = await _context.ProductDetails
+                .Include(detail => detail.Product)
+                .ThenInclude(product => product!.Promotions)
+                .Include(detail => detail.Prices)
+                .Include(detail => detail.Stocks)
+                .FirstOrDefaultAsync(detail => detail.Id == id);
+            return Ok(_mapper.Map<ProductDetailInfo>(detail));
+		}
 
-        [HttpGet()]
+		[HttpGet()]
+        [AllowAnonymous]
         public async Task<IActionResult> GetProductDetails([FromQuery] int productId, [FromQuery] bool isActive = true, [FromQuery] bool isInStock = false)
         {
             var details = _context.ProductDetails.Where(d => d.ProductId == productId);
@@ -39,10 +53,22 @@ namespace CT554_API.Controllers
                 details = details.Where(d => d.IsAvailable == isActive);
             };
             return Ok(_mapper.Map<IEnumerable<ProductDetailInfo>>(
-                await details.Include(detail => detail.Prices).Include(detail => detail.Stocks).ToListAsync())
+                await details.Include(detail => detail.Prices).Include(detail => detail.Stocks).Include(detail => detail!.Product!.Promotions).ToListAsync())
             );
         }
 
+        [HttpGet("list")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetProductDetails([FromQuery] string ids)
+        {
+            var listIds = ids.Split(',').Select(id => int.Parse(id));
+            var productDetailsToResult = await _context.ProductDetails. Include(detail => detail.Stocks)
+                .Include(detail => detail.Prices).Where(detail => listIds.Contains(detail.Id))
+                .AsSplitQuery()
+                .Include(detail => detail.Product).ThenInclude(product => product!.Promotions).ToListAsync();
+
+			return Ok(_mapper.Map<IEnumerable<ProductDetailInfo>>(productDetailsToResult));
+        }
 
         [HttpPost]
         public async Task<IActionResult> PostProductDetail([FromBody] ProductDetailModel detail)
@@ -58,29 +84,31 @@ namespace CT554_API.Controllers
 
             await _context.ProductDetails.AddAsync(newDetail);
             await _context.SaveChangesAsync();
-            List<Price> prices = new();
-            prices.Add(new Price
-            {
-                IsImportPrice = true,
-                Value = detail.ImportPrice,
-                IsRetailPrice = false,
-                ProductDetailId = newDetail.Id
-            });
-            prices.Add(new Price
-            {
-                IsImportPrice = false,
-                Value = detail.RetailPrice,
-                IsRetailPrice = true,
-                ProductDetailId = newDetail.Id
-            });
-            prices.Add(new Price
-            {
-                IsImportPrice = false,
-                Value = detail.WholePrice,
-                IsRetailPrice = false,
-                ProductDetailId = newDetail.Id
-            });
-            await _context.Prices.AddRangeAsync(prices);
+			List<Price> prices = new()
+			{
+				new Price
+				{
+					IsImportPrice = true,
+					Value = detail.ImportPrice,
+					IsRetailPrice = false,
+					ProductDetailId = newDetail.Id
+				},
+				new Price
+				{
+					IsImportPrice = false,
+					Value = detail.RetailPrice,
+					IsRetailPrice = true,
+					ProductDetailId = newDetail.Id
+				},
+				new Price
+				{
+					IsImportPrice = false,
+					Value = detail.WholePrice,
+					IsRetailPrice = false,
+					ProductDetailId = newDetail.Id
+				}
+			};
+			await _context.Prices.AddRangeAsync(prices);
             await _context.SaveChangesAsync();
             return Ok(detail);
         }
@@ -93,14 +121,15 @@ namespace CT554_API.Controllers
                 return BadRequest();
             }
 
-            var detail = _context.ProductDetails.Include(product => product.Prices).FirstOrDefault() ?? throw new Exception("Not found");
-            _context.ProductDetails.Update(detail);
+            var detail = _context.ProductDetails.Include(product => product.Prices).FirstOrDefault(detail => detail.Id == model.Id) ?? throw new Exception("Not found");
             detail.Unit = model.Unit;
             detail.Description = model.Description;
             detail.IsAvailable = model.IsAvailable;
             detail.ToWholesale = model.ToWholesale;
+            _context.ProductDetails.Update(detail);
+			await _context.SaveChangesAsync();
 
-            if (detail.GetImportPrice() != model.ImportPrice)
+			if (detail.GetImportPrice() != model.ImportPrice)
             {
                 _context.Prices.Add(new Price
                 {
@@ -132,7 +161,6 @@ namespace CT554_API.Controllers
                     ProductDetailId = id
                 });
             }
-
 
 
             await _context.SaveChangesAsync();

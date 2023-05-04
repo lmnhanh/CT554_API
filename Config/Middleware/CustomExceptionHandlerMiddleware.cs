@@ -1,4 +1,4 @@
-﻿using CT554_API.Models;
+﻿using CT554_API.Models.Common;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
